@@ -990,7 +990,7 @@ export class Agent {
 
     // Stop indexing deployments that are no longer worth indexing
     await queue.addAll(
-      remove.map(deployment => async () => this.graphNode.pause(deployment)),
+      pause.map(deployment => async () => this.graphNode.pause(deployment)),
     )
 
     await queue.onIdle()
