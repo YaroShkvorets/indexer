@@ -384,7 +384,6 @@ export class Operator {
     epoch: number,
   ): Promise<void> {
     const activeDeploymentAllocationsEligibleForClose = activeDeploymentAllocations
-      .filter((allocation) => allocation.createdAtEpoch < epoch)
       .map((allocation) => allocation.id)
     // Make sure to close all active allocations on the way out
     if (activeDeploymentAllocationsEligibleForClose.length > 0) {
