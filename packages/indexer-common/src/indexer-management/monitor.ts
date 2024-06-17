@@ -336,7 +336,7 @@ export class NetworkMonitor {
     }
     let subgraphs: Subgraph[] = []
     const queryProgress = {
-      lastCreatedAt: 0,
+      lastId: 0,
       first: 20,
       fetched: 0,
       exhausted: false,
@@ -352,10 +352,10 @@ export class NetworkMonitor {
       try {
         const result = await this.networkSubgraph.checkedQuery(
           gql`
-            query subgraphs($first: Int!, $lastCreatedAt: Int!, $subgraphs: [String!]!) {
+            query subgraphs($first: Int!, $lastId: Int!, $subgraphs: [String!]!) {
               subgraphs(
-                where: { id_gt: $lastCreatedAt, id_in: $subgraphs }
-                orderBy: createdAt
+                where: { id_gt: $lastId, id_in: $subgraphs }
+                orderBy: id
                 orderDirection: asc
                 first: $first
               ) {
@@ -374,7 +374,7 @@ export class NetworkMonitor {
           `,
           {
             first: queryProgress.first,
-            lastCreatedAt: queryProgress.lastCreatedAt,
+            lastId: queryProgress.lastId,
             subgraphs: ids,
           },
         )
@@ -410,7 +410,7 @@ export class NetworkMonitor {
 
         queryProgress.exhausted = results.length < queryProgress.first
         queryProgress.fetched += results.length
-        queryProgress.lastCreatedAt = results[results.length - 1].createdAt
+        queryProgress.lastId = results[results.length - 1].id
 
         subgraphs = subgraphs.concat(results)
       } catch (error) {
@@ -581,7 +581,7 @@ export class NetworkMonitor {
   async subgraphDeployments(): Promise<SubgraphDeployment[]> {
     const deployments: SubgraphDeployment[] = []
     const queryProgress = {
-      lastCreatedAt: 0,
+      lastId: '',
       first: 10,
       fetched: 0,
       exhausted: false,
@@ -596,10 +596,10 @@ export class NetworkMonitor {
       try {
         const result = await this.networkSubgraph.checkedQuery(
           gql`
-            query subgraphDeployments($first: Int!, $lastCreatedAt: Int!) {
+            query subgraphDeployments($first: Int!, $lastId: Int!) {
               subgraphDeployments(
-                where: { createdAt_gt: $lastCreatedAt }
-                orderBy: createdAt
+                where: { id_gt: $lastId }
+                orderBy: id
                 orderDirection: asc
                 first: $first
               ) {
@@ -613,7 +613,7 @@ export class NetworkMonitor {
               }
             }
           `,
-          { first: queryProgress.first, lastCreatedAt: queryProgress.lastCreatedAt },
+          { first: queryProgress.first, lastId: queryProgress.lastId },
         )
 
         if (result.error) {
@@ -632,8 +632,7 @@ export class NetworkMonitor {
 
         queryProgress.exhausted = networkDeployments.length < queryProgress.first
         queryProgress.fetched += networkDeployments.length
-        queryProgress.lastCreatedAt =
-          networkDeployments[networkDeployments.length - 1].createdAt
+        queryProgress.lastId = networkDeployments[networkDeployments.length - 1].id
         deployments.push(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           ...networkDeployments.map((x: any) =>
@@ -1128,7 +1127,7 @@ Please submit an issue at https://github.com/graphprotocol/block-oracle/issues/n
     try {
       const zeroPOI = utils.hexlify(Array(32).fill(0))
       const disputableEpoch = currentEpoch - this.indexerOptions.poiDisputableEpochs
-      let lastCreatedAt = 0
+      let lastId = ''
       while (dataRemaining) {
         const result = await this.networkSubgraph.checkedQuery(
           gql`
@@ -1141,7 +1140,7 @@ Please submit an issue at https://github.com/graphprotocol/block-oracle/issues/n
             ) {
               allocations(
                 where: {
-                  createdAt_gt: $createdAt
+                  id_gt: $lastId
                   subgraphDeployment_in: $deployments
                   allocatedTokens_gt: $minimumAllocation
                   closedAtEpoch_gte: $disputableEpoch
@@ -1149,7 +1148,7 @@ Please submit an issue at https://github.com/graphprotocol/block-oracle/issues/n
                   poi_not: $zeroPOI
                 }
                 first: 1000
-                orderBy: createdAt
+                orderBy: id
                 orderDirection: asc
               ) {
                 id
@@ -1175,7 +1174,7 @@ Please submit an issue at https://github.com/graphprotocol/block-oracle/issues/n
             deployments: deployments.map((subgraph) => subgraph.bytes32),
             minimumAllocation,
             disputableEpoch,
-            createdAt: lastCreatedAt,
+            lastId,
             zeroPOI,
           },
         )
@@ -1186,7 +1185,7 @@ Please submit an issue at https://github.com/graphprotocol/block-oracle/issues/n
         if (result.data.allocations.length == 0) {
           dataRemaining = false
         } else {
-          lastCreatedAt = result.data.allocations.slice(-1)[0].createdAt
+          lastId = result.data.allocations.slice(-1)[0].id
           const parsedResult: Allocation[] =
             result.data.allocations.map(parseGraphQLAllocation)
           allocations = allocations.concat(parsedResult)
